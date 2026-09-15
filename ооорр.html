@@ -1,0 +1,872 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Печать фотографий</title>
+
+  <style id="page-style">
+    @page {
+      size: 100mm 150mm;
+      margin: 0;
+    }
+  </style>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, sans-serif;
+      background: #f4f6f8;
+      color: #333;
+    }
+
+    .controls {
+      max-width: 520px;
+      margin: 0 auto 20px;
+      padding: 20px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 9px;
+      border: 1px solid #ccc;
+      border-radius: 7px;
+      background: white;
+    }
+
+    .selected-count {
+      margin-top: 7px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .info {
+      padding: 10px;
+      margin-top: 10px;
+      background: #f5f5f5;
+      border-radius: 7px;
+      font-size: 13px;
+    }
+
+    .btn-print {
+      width: 100%;
+      padding: 13px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 7px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn-print:hover {
+      background: #0069d9;
+    }
+
+    .sheet-wrapper {
+      display: flex;
+      justify-content: center;
+      overflow: auto;
+    }
+
+    .sheet {
+      background: white;
+      box-shadow: 0 0 12px rgba(0,0,0,0.15);
+
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+
+      gap: 3mm;
+    }
+
+    /* Размеры бумаги */
+
+    .sheet.size-10x15 {
+      width: 100mm;
+      height: 150mm;
+      padding: 5mm;
+    }
+
+    .sheet.size-13x18 {
+      width: 130mm;
+      height: 180mm;
+      padding: 5mm;
+    }
+
+    .sheet.size-13x13 {
+      width: 130mm;
+      height: 130mm;
+      padding: 5mm;
+    }
+
+    .sheet.size-a4 {
+      width: 210mm;
+      height: 297mm;
+      padding: 8mm;
+    }
+
+    /* Фото */
+
+    .photo-box {
+      overflow: hidden;
+      position: relative;
+      background: #fafafa;
+
+      flex-shrink: 0;
+    }
+
+    .photo-box img {
+      width: 100%;
+      height: 100%;
+
+      object-fit: cover;
+
+      transform-origin: center center;
+      display: block;
+    }
+
+    /* Рамки */
+
+    .frame-none {
+      border: none;
+    }
+
+    .frame-white {
+      border: 1mm solid white;
+    }
+
+    .frame-black {
+      border: 0.5mm solid black;
+    }
+
+    .frame-gray {
+      border: 0.5mm solid #999;
+    }
+
+    .frame-dashed {
+      border: 0.5mm dashed #777;
+    }
+
+    /* Формы */
+
+    .shape-square {
+      border-radius: 0;
+    }
+
+    .shape-rounded {
+      border-radius: 3mm;
+    }
+
+    .shape-round {
+      border-radius: 50%;
+    }
+
+    @media print {
+
+      body {
+        background: none;
+        padding: 0;
+      }
+
+      .controls {
+        display: none !important;
+      }
+
+      .sheet-wrapper {
+        display: block;
+      }
+
+      .sheet {
+        box-shadow: none;
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="controls">
+
+    <h2>🖨️ Печать фотографий</h2>
+
+    <!-- ФОТО -->
+
+    <div class="form-group">
+      <label>1. Выберите фотографии:</label>
+
+      <input
+        type="file"
+        id="upload"
+        accept="image/*"
+        multiple
+      >
+
+      <div class="selected-count" id="selectedCount">
+        Фотографии не выбраны
+      </div>
+    </div>
+
+
+    <!-- РАЗМЕР ФОТО -->
+
+    <div class="form-group">
+      <label>2. Размер фотографии:</label>
+
+      <select id="photoSize">
+
+        <option value="3x4">
+          3 × 4 см
+        </option>
+
+        <option value="4x6">
+          4 × 6 см
+        </option>
+
+        <option value="5x7">
+          5 × 7 см
+        </option>
+
+        <option value="6x9">
+          6 × 9 см
+        </option>
+
+        <option value="9x13">
+          9 × 13 см
+        </option>
+
+        <option value="10x15">
+          10 × 15 см
+        </option>
+
+        <option value="square">
+          Квадрат 5 × 5 см
+        </option>
+
+      </select>
+    </div>
+
+
+    <!-- ОРИЕНТАЦИЯ -->
+
+    <div class="form-group">
+      <label>3. Ориентация фотографии:</label>
+
+      <select id="orientation">
+
+        <option value="portrait">
+          Вертикальная
+        </option>
+
+        <option value="landscape">
+          Горизонтальная
+        </option>
+
+      </select>
+    </div>
+
+
+    <!-- БУМАГА -->
+
+    <div class="form-group">
+      <label>4. Размер бумаги:</label>
+
+      <select id="paperSize">
+
+        <option value="10x15" selected>
+          10 × 15 см
+        </option>
+
+        <option value="13x18">
+          13 × 18 см
+        </option>
+
+        <option value="13x13">
+          13 × 13 см
+        </option>
+
+        <option value="a4">
+          A4 — 21 × 29,7 см
+        </option>
+
+      </select>
+    </div>
+
+
+    <!-- РАМКА -->
+
+    <div class="form-group">
+      <label>5. Рамка:</label>
+
+      <select id="frame">
+
+        <option value="none">
+          Без рамки
+        </option>
+
+        <option value="white">
+          Белая
+        </option>
+
+        <option value="black">
+          Чёрная
+        </option>
+
+        <option value="gray">
+          Серая
+        </option>
+
+        <option value="dashed">
+          Пунктирная
+        </option>
+
+      </select>
+    </div>
+
+
+    <!-- ФОРМА -->
+
+    <div class="form-group">
+      <label>6. Форма фотографии:</label>
+
+      <select id="shape">
+
+        <option value="square">
+          Прямоугольная
+        </option>
+
+        <option value="rounded">
+          Скруглённые углы
+        </option>
+
+        <option value="round">
+          Круглая
+        </option>
+
+      </select>
+    </div>
+
+
+    <!-- МАСШТАБ -->
+
+    <div class="form-group">
+      <label>
+        7. Масштаб:
+      </label>
+
+      <input
+        type="range"
+        id="zoom"
+        min="100"
+        max="250"
+        value="135"
+      >
+    </div>
+
+
+    <!-- СДВИГ -->
+
+    <div class="form-group">
+      <label>
+        8. Сдвиг по горизонтали:
+      </label>
+
+      <input
+        type="range"
+        id="offsetX"
+        min="-50"
+        max="50"
+        value="0"
+      >
+    </div>
+
+
+    <div class="form-group">
+      <label>
+        9. Сдвиг по вертикали:
+      </label>
+
+      <input
+        type="range"
+        id="offsetY"
+        min="-50"
+        max="50"
+        value="0"
+      >
+    </div>
+
+
+    <div class="info" id="sheetInfo">
+      Расчёт фотографий...
+    </div>
+
+
+    <br>
+
+    <button
+      class="btn-print"
+      onclick="window.print()"
+    >
+      🖨️ Распечатать
+    </button>
+
+  </div>
+
+
+  <div class="sheet-wrapper">
+
+    <div
+      class="sheet size-10x15"
+      id="sheet"
+    ></div>
+
+  </div>
+
+
+  <script>
+
+    let imgUrls = [];
+
+
+    /*
+      Размеры бумаги
+      в миллиметрах
+    */
+
+    const papers = {
+
+      "10x15": {
+        width: 100,
+        height: 150
+      },
+
+      "13x18": {
+        width: 130,
+        height: 180
+      },
+
+      "13x13": {
+        width: 130,
+        height: 130
+      },
+
+      "a4": {
+        width: 210,
+        height: 297
+      }
+
+    };
+
+
+    /*
+      Размеры фотографий
+      в миллиметрах
+    */
+
+    const photos = {
+
+      "3x4": {
+        width: 30,
+        height: 40
+      },
+
+      "4x6": {
+        width: 40,
+        height: 60
+      },
+
+      "5x7": {
+        width: 50,
+        height: 70
+      },
+
+      "6x9": {
+        width: 60,
+        height: 90
+      },
+
+      "9x13": {
+        width: 90,
+        height: 130
+      },
+
+      "10x15": {
+        width: 100,
+        height: 150
+      },
+
+      "square": {
+        width: 50,
+        height: 50
+      }
+
+    };
+
+
+    function render() {
+
+      const sheet =
+        document.getElementById("sheet");
+
+      const paperSize =
+        document.getElementById("paperSize").value;
+
+      const photoSize =
+        document.getElementById("photoSize").value;
+
+      const orientation =
+        document.getElementById("orientation").value;
+
+      const frame =
+        document.getElementById("frame").value;
+
+      const shape =
+        document.getElementById("shape").value;
+
+      const zoom =
+        document.getElementById("zoom").value / 100;
+
+      const offsetX =
+        document.getElementById("offsetX").value;
+
+      const offsetY =
+        document.getElementById("offsetY").value;
+
+
+      /*
+        Размер бумаги
+      */
+
+      const paper =
+        papers[paperSize];
+
+
+      /*
+        Размер фотографии
+      */
+
+      let photo =
+        photos[photoSize];
+
+
+      let photoWidth =
+        photo.width;
+
+      let photoHeight =
+        photo.height;
+
+
+      /*
+        Меняем ориентацию
+      */
+
+      if (
+        orientation === "landscape" &&
+        photoSize !== "square"
+      ) {
+
+        [photoWidth, photoHeight] =
+          [photoHeight, photoWidth];
+
+      }
+
+
+      /*
+        Размеры страницы
+      */
+
+      sheet.className =
+        "sheet size-" + paperSize;
+
+
+      /*
+        CSS для печати
+      */
+
+      document.getElementById(
+        "page-style"
+      ).innerHTML =
+
+        `@page {
+          size: ${paper.width}mm ${paper.height}mm;
+          margin: 0;
+        }`;
+
+
+      /*
+        Отступ листа
+      */
+
+      const padding = 5;
+
+      const gap = 3;
+
+
+      /*
+        Сколько фото помещается
+      */
+
+      const availableWidth =
+        paper.width - padding * 2;
+
+      const availableHeight =
+        paper.height - padding * 2;
+
+
+      const columns =
+        Math.floor(
+          (availableWidth + gap) /
+          (photoWidth + gap)
+        );
+
+
+      const rows =
+        Math.floor(
+          (availableHeight + gap) /
+          (photoHeight + gap)
+        );
+
+
+      let count =
+        columns * rows;
+
+
+      if (count < 1) {
+        count = 1;
+      }
+
+
+      /*
+        Очищаем лист
+      */
+
+      sheet.innerHTML = "";
+
+
+      /*
+        Создаём фотографии
+      */
+
+      for (
+        let i = 0;
+        i < count;
+        i++
+      ) {
+
+        const box =
+          document.createElement("div");
+
+
+        box.className =
+          "photo-box " +
+          "frame-" + frame + " " +
+          "shape-" + shape;
+
+
+        box.style.width =
+          photoWidth + "mm";
+
+
+        box.style.height =
+          photoHeight + "mm";
+
+
+        /*
+          Если есть фото
+        */
+
+        if (imgUrls.length > 0) {
+
+          const index =
+            i % imgUrls.length;
+
+
+          const img =
+            document.createElement("img");
+
+
+          img.src =
+            imgUrls[index];
+
+
+          img.style.transform =
+            `scale(${zoom})
+             translate(${offsetX}%,
+                        ${offsetY}%)`;
+
+
+          box.appendChild(img);
+
+        }
+
+
+        sheet.appendChild(box);
+
+      }
+
+
+      /*
+        Информация
+      */
+
+      document.getElementById(
+        "sheetInfo"
+      ).innerHTML =
+
+        `📄 Бумага: <b>${paper.width} × ${paper.height} мм</b><br>
+         📷 Фото: <b>${photoWidth} × ${photoHeight} мм</b><br>
+         🔲 Помещается: <b>${count} шт.</b><br>
+         📐 Сетка: <b>${columns} × ${rows}</b>`;
+
+
+      /*
+        Количество выбранных фото
+      */
+
+      const selected =
+        document.getElementById(
+          "selectedCount"
+        );
+
+
+      if (imgUrls.length === 0) {
+
+        selected.textContent =
+          "Фотографии не выбраны";
+
+      } else {
+
+        selected.textContent =
+          `Выбрано фотографий: ${imgUrls.length}`;
+
+      }
+
+    }
+
+
+    /*
+      Загрузка нескольких фото
+    */
+
+    document
+      .getElementById("upload")
+      .addEventListener(
+        "change",
+        function(e) {
+
+          /*
+            Освобождаем старые URL
+          */
+
+          imgUrls.forEach(
+            url => URL.revokeObjectURL(url)
+          );
+
+
+          imgUrls = [];
+
+
+          /*
+            Загружаем все выбранные фотографии
+          */
+
+          const files =
+            Array.from(e.target.files);
+
+
+          files.forEach(file => {
+
+            if (
+              file.type.startsWith("image/")
+            ) {
+
+              imgUrls.push(
+                URL.createObjectURL(file)
+              );
+
+            }
+
+          });
+
+
+          render();
+
+        }
+      );
+
+
+    /*
+      Обновление настроек
+    */
+
+    [
+
+      "zoom",
+      "offsetX",
+      "offsetY",
+      "paperSize",
+      "photoSize",
+      "orientation",
+      "frame",
+      "shape"
+
+    ].forEach(id => {
+
+      document
+        .getElementById(id)
+        .addEventListener(
+          "input",
+          render
+        );
+
+      document
+        .getElementById(id)
+        .addEventListener(
+          "change",
+          render
+        );
+
+    });
+
+
+    /*
+      Первый запуск
+    */
+
+    render();
+
+  </script>
+
+</body>
+</html>
+```
